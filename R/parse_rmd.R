@@ -1,7 +1,7 @@
 examples.parse_rmd = function() {
   setwd("D:/libraries/miniMOOC/example")
   file = "vq_ma_1a.Rmd"
-  preview_mooc_rmd(file, lang="de")
+  preview_mooc_rmd(file, lang="de", log.file="log.txt")
 }
 
 miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
@@ -9,23 +9,45 @@ miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
   js = read.as.utf8(system.file("js/miniMOOC.js", package="miniMOOC")) %>%
     merge.lines()
 
+  quiz.handler = NULL
+  if (!is.null(log.file)) {
+    quiz.handler = function(qu, part.ind=part.ind, part.correct=correct, solved, answer, ..., app=getApp()) {
+      if (part.ind == 0) return()
+      restore.point("jkhfhdf")
+      line = as.data.frame(list(time=Sys.time(),userid=app$random_id, quiz=qu$id, part=part.ind, correct=part.correct, answer=as.character(answer)))
+      if (file.exists(log.file)) {
+        try(write.table(line, log.file,sep = ";", append=TRUE,quote = TRUE,row.names = FALSE,col.names = FALSE))
+      } else {
+        try(write.table(line, log.file,sep = ";", quote = TRUE,row.names = FALSE,col.names = TRUE))
+      }
+
+
+    }
+  }
+
   for (qu in mm$quiz.li) {
-    add.quiz.handlers(qu)
+    add.quiz.handlers(qu,quiz.handler = quiz.handler)
   }
 
   app$ui = fluidPage(
     mm$ui,
     tags$script(HTML(js))
   )
+  appInitHandler(function(..., app=getApp()) {
+    app$random_id = random.string()
+  }, app=getApp())
+
   app
 }
 
-preview_mooc_rmd = function(file, ...) {
+
+
+preview_mooc_rmd = function(file,log.file=NULL, ...) {
   #app = eventsApp()
   restore.point("preview_mooc_rmd")
 
   mm = parse_mooc_rmd(file,...)
-  app = miniMOOCApp(mm)
+  app = miniMOOCApp(mm, log.file=log.file)
   viewApp(app)
 }
 
@@ -52,6 +74,7 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.wi
         inner.ui = sec.li[[i]]$ui
         if (i < length(sec.li)) {
           inner.ui = tagList(inner.ui,
+            hr(),
             simpleButton(id=paste0("nextBtn-",i),label="Continue", class.add="nextBtn")
           )
         }

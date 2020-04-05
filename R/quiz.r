@@ -295,10 +295,10 @@ click.check.quiz = function(app=getApp(), part.ind, qu, quiz.handler=NULL, ...) 
   # check all parts
   if (part.ind == 0) {
     for (part.ind in seq_along(qu$parts))
-      click.check.quiz(app=app, part.ind=part.ind,qu=qu, quiz.handler=NULL)
+      click.check.quiz(app=app, part.ind=part.ind,qu=qu, quiz.handler=quiz.handler)
 
     if (!is.null(quiz.handler)) {
-      quiz.handler(app=app, qu=qu, part.ind=0, part.correct=NA, solved=qu$state$solved)
+      quiz.handler(app=app, qu=qu, part.ind=0, part.correct=NA, solved=qu$state$solved, answer=NA)
     }
     return(qu$state$solved)
   }
@@ -317,15 +317,17 @@ click.check.quiz = function(app=getApp(), part.ind, qu, quiz.handler=NULL, ...) 
   if (correct) {
     cat("Correct!")
     setUI(part$resultId,HTML(part$success))
+    dsetUI(part$resultId,HTML(part$success))
   } else {
     cat("Wrong")
     setUI(part$resultId,HTML(part$failure))
+    dsetUI(part$resultId,HTML(part$failure))
   }
   qu$state$part.solved[part.ind] = correct
   qu$state$solved = all(qu$state$part.solved)
 
   if (!is.null(quiz.handler)) {
-    quiz.handler(app=app, qu=qu, part.ind=part.ind, part.correct=correct, solved=qu$state$solved)
+    quiz.handler(app=app, qu=qu, part.ind=part.ind, part.correct=correct, solved=qu$state$solved, answer=answer)
   }
 
 }
