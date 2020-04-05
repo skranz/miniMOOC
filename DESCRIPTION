@@ -1,6 +1,6 @@
 Package: miniMOOC
 Type: Package
-Title: Minimalistic Open Online Course as a Shiny App.
+Title: Minimalistic Open Online Course as a Shiny App
 Version: 0.1.0
 Author: Sebastian Kranz
 Maintainer: Sebastian Kranz <sebastian.kranz@uni-ulm.de>

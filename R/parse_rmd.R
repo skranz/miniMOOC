@@ -1,25 +1,73 @@
 examples.parse_rmd = function() {
-  setwd("D:/libraries/simplestMOOC/example")
+  setwd("D:/libraries/miniMOOC/example")
   file = "vq_ma_1a.Rmd"
+  preview_mooc_rmd(file)
 
   app = eventsApp()
+
   app$ui = fluidPage(
     h4("Hello"),
-    parse_mooc_rmd(file, youtube.width=800)
+    parse_mooc_rmd(file, youtube.width=800),
+
   )
   viewApp(app)
 }
+
+
+mooc.js = function() {
+}
+
 
 preview_mooc_rmd = function(file, ...) {
   app = eventsApp()
+  mm = parse_mooc_rmd(file)
+  js = read.as.utf8(system.file("js/miniMOOC.js", package="miniMOOC")) %>%
+    merge.lines()
+
   app$ui = fluidPage(
-    parse_mooc_rmd(file, ...)
+    mm$ui,
+    tags$script(HTML(js))
   )
   viewApp(app)
 }
 
-parse_mooc_rmd = function(file, chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width)) {
-  txt = read.as.utf8(file)
+parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width)) {
+  restore.point("parse_mooc_rmd")
+
+  rmd.txt = read.as.utf8(file)
+
+  section.lines = which(startsWith(rmd.txt, "#. section "))
+  if (length(section.lines)==0) {
+    res = parse_mooc_section(rmd.txt, chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height)
+    ui = res$ui
+    quiz.li = res$quiz.li
+  } else {
+    txt.lines = c(section.lines+1, NROW(rmd.txt)+2)
+    sec.li = lapply(seq_along(section.lines), function(i) {
+      parse_mooc_section(rmd.txt[txt.lines[i]:(txt.lines[i+1]-2)],chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height)
+    })
+    #ui.li = lapply(sec.li, function(sec) sec$ui)
+    quiz.li = do.call(c, lapply(sec.li, function(sec) sec$quiz.li))
+
+    ui = do.call("tabsetPanel",  c(list(id="sectionTabset"),
+      lapply(seq_along(sec.li), function(i) {
+        inner.ui = sec.li[[i]]$ui
+        if (i < length(sec.li)) {
+          inner.ui = tagList(inner.ui,
+            simpleButton(id=paste0("nextBtn-",i),label="Continue", class.add="nextBtn")
+          )
+        }
+        tabPanel(title=i,inner.ui)
+     })
+    ))
+
+  }
+  list(ui = ui, quiz.li = quiz.li)
+}
+
+parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width)) {
+  restore.point("parse_mooc_section")
+
   blocks = rmdtools::find.rmd.nested(txt) %>%
     filter(form != "chunk")
 
@@ -50,9 +98,12 @@ parse_mooc_rmd = function(file, chunks=c("knit","render","ignore")[2], youtube.w
 
   #undebug(render.compiled.rmd)
   ui = render.compiled.rmd(cr, out.type="shiny")
-  ui
+
+  return(list(ui=ui,cr=cr, quiz.li=quiz.li))
 
 }
+
+
 
 remove.ignore.blocks.from.txt = function(txt, blocks) {
   # Remove ignore blocks
