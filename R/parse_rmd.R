@@ -1,7 +1,7 @@
 examples.parse_rmd = function() {
   setwd("D:/libraries/miniMOOC/example")
   file = "vq_ma_1a.Rmd"
-  preview_mooc_rmd(file)
+  preview_mooc_rmd(file, lang="de")
 }
 
 miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
@@ -21,28 +21,28 @@ miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
 }
 
 preview_mooc_rmd = function(file, ...) {
-  app = eventsApp()
+  #app = eventsApp()
   restore.point("preview_mooc_rmd")
 
-  mm = parse_mooc_rmd(file)
+  mm = parse_mooc_rmd(file,...)
   app = miniMOOCApp(mm)
   viewApp(app)
 }
 
-parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width)) {
+parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en") {
   restore.point("parse_mooc_rmd")
 
   rmd.txt = read.as.utf8(file)
 
-  section.lines = which(startsWith(rmd.txt, "#. section "))
+  section.lines = which(startsWith(rmd.txt, "#. section"))
   if (length(section.lines)==0) {
-    res = parse_mooc_section(rmd.txt, chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height)
+    res = parse_mooc_section(rmd.txt, chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height, lang=lang)
     ui = res$ui
     quiz.li = res$quiz.li
   } else {
     txt.lines = c(section.lines+1, NROW(rmd.txt)+2)
     sec.li = lapply(seq_along(section.lines), function(i) {
-      parse_mooc_section(rmd.txt[txt.lines[i]:(txt.lines[i+1]-2)],chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height)
+      parse_mooc_section(rmd.txt[txt.lines[i]:(txt.lines[i+1]-2)],chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height, lang=lang)
     })
     #ui.li = lapply(sec.li, function(sec) sec$ui)
     quiz.li = do.call(c, lapply(sec.li, function(sec) sec$quiz.li))
@@ -63,7 +63,7 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.wi
   list(ui = ui, quiz.li = quiz.li)
 }
 
-parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width)) {
+parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en") {
   restore.point("parse_mooc_section")
 
   blocks = rmdtools::find.rmd.nested(txt) %>%
@@ -71,8 +71,9 @@ parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtub
 
   # Replace Youtube links
   lines = blocks$start[blocks$type=="youtube"]
-  txt[lines] = sapply(txt[lines], youtube.hashdot.to.iframe,width=youtube.width, height=youtube.height)
-
+  if (length(lines)>0) {
+    txt[lines] = unlist(lapply(txt[lines], youtube.hashdot.to.iframe,width=youtube.width, height=youtube.height))
+  }
   txt = remove.ignore.blocks.from.txt(txt, blocks)
 
   cr = rmdtools::compile.rmd(text=txt, blocks="ph",chunks = chunks)
@@ -87,7 +88,7 @@ parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtub
     id = rmdtools::parse.block.args(info$header,allow.unquoted.title = TRUE)$name
     if (is.null(id))
       stop("All your quizzes must have names!")
-    quiz = shinyQuiz(id=id, yaml=info$inner.txt)
+    quiz = shinyQuiz(id=id, yaml=info$inner.txt,add.handler = FALSE, lang=lang)
   })
   ph$value[ph.inds] = lapply(quiz.li, function(quiz) quiz$ui)
   names(ph$value) = ph$id

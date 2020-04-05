@@ -61,7 +61,7 @@ quizDefaults = function(lang="en") {
 # @param quiz.handler a function that will be called if the quiz is checked.
 #        The boolean argument solved is TRUE if the quiz was solved
 #        and otherwise FALSE
-shinyQuiz = function(id=paste0("quiz_",sample.int(10e10,1)),qu=NULL, yaml,  quiz.handler=NULL, add.handler=TRUE, single.check.btn=TRUE, defaults=quizDefaults(lang=lang), lang="en") {
+shinyQuiz = function(id=paste0("quiz_",sample.int(10e10,1)),qu=NULL, yaml,  quiz.handler=NULL, add.handler=FALSE, single.check.btn=TRUE, defaults=quizDefaults(lang=lang), lang="en") {
   restore.point("shinyQuiz")
 
   if (is.null(qu)) {
@@ -86,7 +86,7 @@ shinyQuiz = function(id=paste0("quiz_",sample.int(10e10,1)),qu=NULL, yaml,  quiz
      qu$checkBtnId = paste0(qu$id,"__checkBtn")
   }
 
-  qu$parts = lapply(seq_along(qu$parts), function(ind) init.quiz.part(qu$parts[[ind]],ind,qu))
+  qu$parts = lapply(seq_along(qu$parts), function(ind) init.quiz.part(qu$parts[[ind]],ind,qu, defaults=defaults))
   np = length(qu$parts)
 
   qu$max.points = sum(sapply(qu$parts, function(part) part[["points"]]))
