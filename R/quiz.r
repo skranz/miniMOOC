@@ -142,7 +142,7 @@ init.quiz.part = function(part=qu$parts[[part.ind]], part.ind=1, qu, has.check.b
   }
 
   if (is.null(part[["points"]])) {
-    part$points = 1
+    part$points = 0
   }
 
   txt = part$success

@@ -2,32 +2,30 @@ examples.parse_rmd = function() {
   setwd("D:/libraries/miniMOOC/example")
   file = "vq_ma_1a.Rmd"
   preview_mooc_rmd(file)
-
-  app = eventsApp()
-
-  app$ui = fluidPage(
-    h4("Hello"),
-    parse_mooc_rmd(file, youtube.width=800),
-
-  )
-  viewApp(app)
 }
 
-
-mooc.js = function() {
-}
-
-
-preview_mooc_rmd = function(file, ...) {
+miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
   app = eventsApp()
-  mm = parse_mooc_rmd(file)
   js = read.as.utf8(system.file("js/miniMOOC.js", package="miniMOOC")) %>%
     merge.lines()
+
+  for (qu in mm$quiz.li) {
+    add.quiz.handlers(qu)
+  }
 
   app$ui = fluidPage(
     mm$ui,
     tags$script(HTML(js))
   )
+  app
+}
+
+preview_mooc_rmd = function(file, ...) {
+  app = eventsApp()
+  restore.point("preview_mooc_rmd")
+
+  mm = parse_mooc_rmd(file)
+  app = miniMOOCApp(mm)
   viewApp(app)
 }
 
