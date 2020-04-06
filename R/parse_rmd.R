@@ -1,10 +1,10 @@
 examples.parse_rmd = function() {
   setwd("D:/libraries/miniMOOC/example")
   file = "vq_ma_1a.Rmd"
-  preview_mooc_rmd(file, lang="de", log.file="log.txt")
+  preview_mooc_rmd(file, lang="de", log.file="log.txt", window.title="Market Analysis 1a")
 }
 
-miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
+miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL,title=NULL, window.title=title) {
   app = eventsApp()
   js = read.as.utf8(system.file("js/miniMOOC.js", package="miniMOOC")) %>%
     merge.lines()
@@ -14,6 +14,7 @@ miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
     quiz.handler = function(qu, part.ind=part.ind, part.correct=correct, solved, answer, ..., app=getApp()) {
       if (part.ind == 0) return()
       restore.point("jkhfhdf")
+      if (is.null(answer)) return()
       line = as.data.frame(list(time=Sys.time(),userid=app$random_id, quiz=qu$id, part=part.ind, correct=part.correct, answer=as.character(answer)))
       if (file.exists(log.file)) {
         try(write.table(line, log.file,sep = ";", append=TRUE,quote = TRUE,row.names = FALSE,col.names = FALSE))
@@ -30,6 +31,10 @@ miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
   }
 
   app$ui = fluidPage(
+    if (!is.null(window.title))
+      tags$head(tags$title(window.title)),
+    if (!is.null(title))
+      h3(title),
     mm$ui,
     tags$script(HTML(js))
   )
@@ -42,16 +47,17 @@ miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL) {
 
 
 
-preview_mooc_rmd = function(file,log.file=NULL, ...) {
+preview_mooc_rmd = function(file,log.file=NULL,title=NULL,window.title=title, ...) {
   #app = eventsApp()
   restore.point("preview_mooc_rmd")
 
   mm = parse_mooc_rmd(file,...)
-  app = miniMOOCApp(mm, log.file=log.file)
+
+  app = miniMOOCApp(mm, log.file=log.file, title=title, window.title=window.title)
   viewApp(app)
 }
 
-parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en") {
+parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", left.margin=1, right.margin = left.margin) {
   restore.point("parse_mooc_rmd")
 
   rmd.txt = read.as.utf8(file)
@@ -60,6 +66,7 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.wi
   if (length(section.lines)==0) {
     res = parse_mooc_section(rmd.txt, chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height, lang=lang)
     ui = res$ui
+    ui = fluidRow(column(width = 12-left.margin-right.margin, offset=left.margin, inner.ui))
     quiz.li = res$quiz.li
   } else {
     txt.lines = c(section.lines+1, NROW(rmd.txt)+2)
@@ -78,6 +85,7 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.wi
             simpleButton(id=paste0("nextBtn-",i),label="Continue", class.add="nextBtn")
           )
         }
+        inner.ui = fluidRow(column(width = 12-left.margin-right.margin, offset=left.margin, inner.ui))
         tabPanel(title=i,inner.ui)
      })
     ))
