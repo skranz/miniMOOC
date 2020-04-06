@@ -91,6 +91,17 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.wi
     ))
 
   }
+
+  # check if quiz has duplicated id
+  quiz.ids = unlist(lapply(quiz.li, function(qu) qu$id))
+
+  if (length(quiz.ids)>0) {
+    dupl = quiz.ids[duplicated(quiz.ids)]
+    if (length(dupl)>0) {
+      stop("You specified more than once a quiz with name: ", dupl)
+    }
+  }
+
   list(ui = ui, quiz.li = quiz.li)
 }
 
