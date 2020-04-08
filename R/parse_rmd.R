@@ -4,6 +4,12 @@ examples.parse_rmd = function() {
   preview_mooc_rmd(file, lang="de", log.file="log.txt", window.title="Market Analysis 1a")
 }
 
+#' Create a miniMOOC shinyEvents app
+#'
+#' @param mm A compiled miniMOOC object created with \code{parse_mooc_rmd}. You can save the result of \code{parse_mooc_rmd} with \code{saveRDS} and load it with \code{readRDS}.
+#' @param log.file an optional log file in which answers to multiple choice quizzes are anomyously logged in csv format.
+#' @param window.title title of browser window
+#' @param title Optional title shown above the sections tabSet.
 miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL,title=NULL, window.title=title) {
   app = eventsApp()
   js = read.as.utf8(system.file("js/miniMOOC.js", package="miniMOOC")) %>%
@@ -46,7 +52,9 @@ miniMOOCApp = function(mm=readRDS("mm.Rds"), log.file=NULL,title=NULL, window.ti
 }
 
 
-
+#' Preview an Rmd file as miniMOOC page
+#'
+#' You can essentially pass all arguments you pass to miniMOOC app and parse_mooc_rmd.
 preview_mooc_rmd = function(file,log.file=NULL,title=NULL,window.title=title, ...) {
   #app = eventsApp()
   restore.point("preview_mooc_rmd")
@@ -57,7 +65,15 @@ preview_mooc_rmd = function(file,log.file=NULL,title=NULL,window.title=title, ..
   viewApp(app)
 }
 
-parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", left.margin=1, right.margin = left.margin) {
+
+#' Parse and compile an Rmd
+#'
+#' @param file Rmd file path.
+#' @param chunks what shall be done with R code chunks. By default "knit", the other option "render" allows some alternative behavior not yet well documented.
+#' @param youtube.width default width of included youtube iframes. By default 560 you can also set 720.
+#' @param youtube.height default height of included youtube iframes. By default keeps Google's proposed aspect ratio to width.
+#' @param lang default language for quiz messages. Currently only "en" english and "de" German supported.
+parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", left.margin=1, right.margin = left.margin) {
   restore.point("parse_mooc_rmd")
 
   rmd.txt = read.as.utf8(file)
@@ -156,6 +172,11 @@ remove.ignore.blocks.from.txt = function(txt, blocks) {
   txt
 }
 
+#' Converts the short tag for a youtube video
+#'
+#' #. youtube id = "youtubeid"
+#'
+#' To proper HTML code that embeds the iframe with given width and height in pixels.
 youtube.hashdot.to.iframe = function(str, width=560, height=round(width*0.5625)) {
   restore.point("youtube.hashdot.to.iframe")
   arg.str = str.right.of(str, "youtube ")
