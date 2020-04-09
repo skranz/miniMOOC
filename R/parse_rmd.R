@@ -73,7 +73,7 @@ preview_mooc_rmd = function(file,log.file=NULL,title=NULL,window.title=title, ..
 #' @param youtube.width default width of included youtube iframes. By default 560 you can also set 720.
 #' @param youtube.height default height of included youtube iframes. By default keeps Google's proposed aspect ratio to width.
 #' @param lang default language for quiz messages. Currently only "en" english and "de" German supported.
-parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", left.margin=1, right.margin = left.margin) {
+parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", left.margin=1, right.margin = left.margin,with.mathjax=TRUE) {
   restore.point("parse_mooc_rmd")
 
   rmd.txt = read.as.utf8(file)
@@ -83,6 +83,8 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.wi
     res = parse_mooc_section(rmd.txt, chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height, lang=lang)
     ui = res$ui
     ui = fluidRow(column(width = 12-left.margin-right.margin, offset=left.margin, inner.ui))
+    #if (with.mathjax)
+    #  ui = shiny::withMathJax(ui)
     quiz.li = res$quiz.li
   } else {
     txt.lines = c(section.lines+1, NROW(rmd.txt)+2)
@@ -102,6 +104,8 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.wi
           )
         }
         inner.ui = fluidRow(column(width = 12-left.margin-right.margin, offset=left.margin, inner.ui))
+        #if (with.mathjax)
+        #  inner.ui = shiny::withMathJax(inner.ui)
         tabPanel(title=i,inner.ui)
      })
     ))
@@ -118,6 +122,8 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.wi
     }
   }
 
+  if (with.mathjax)
+    ui = shiny::withMathJax(ui)
   list(ui = ui, quiz.li = quiz.li)
 }
 
