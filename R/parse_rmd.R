@@ -73,14 +73,15 @@ preview_mooc_rmd = function(file,log.file=NULL,title=NULL,window.title=title, ..
 #' @param youtube.width default width of included youtube iframes. By default 560 you can also set 720.
 #' @param youtube.height default height of included youtube iframes. By default keeps Google's proposed aspect ratio to width.
 #' @param lang default language for quiz messages. Currently only "en" english and "de" German supported.
-parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", left.margin=1, right.margin = left.margin,with.mathjax=TRUE) {
+#' @param allow.zero.correct Do you want to alllow quizzes without any correct answer? (Could be used as a questionaire replacement.) By default FALSE
+parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", left.margin=1, right.margin = left.margin,with.mathjax=TRUE, allow.zero.correct=FALSE) {
   restore.point("parse_mooc_rmd")
 
   rmd.txt = read.as.utf8(file)
 
   section.lines = which(startsWith(rmd.txt, "#. section"))
   if (length(section.lines)==0) {
-    res = parse_mooc_section(rmd.txt, chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height, lang=lang)
+    res = parse_mooc_section(rmd.txt, chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height, lang=lang, allow.zero.correct=allow.zero.correct)
     ui = res$ui
     ui = fluidRow(column(width = 12-left.margin-right.margin, offset=left.margin, inner.ui))
     #if (with.mathjax)
@@ -89,7 +90,7 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.wi
   } else {
     txt.lines = c(section.lines+1, NROW(rmd.txt)+2)
     sec.li = lapply(seq_along(section.lines), function(i) {
-      parse_mooc_section(rmd.txt[txt.lines[i]:(txt.lines[i+1]-2)],chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height, lang=lang)
+      parse_mooc_section(rmd.txt[txt.lines[i]:(txt.lines[i+1]-2)],chunks=chunks, youtube.width = youtube.width, youtube.height = youtube.height, lang=lang, allow.zero.correct=allow.zero.correct)
     })
     #ui.li = lapply(sec.li, function(sec) sec$ui)
     quiz.li = do.call(c, lapply(sec.li, function(sec) sec$quiz.li))
@@ -127,7 +128,7 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.wi
   list(ui = ui, quiz.li = quiz.li)
 }
 
-parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en") {
+parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", allow.zero.correct=FALSE) {
   restore.point("parse_mooc_section")
 
   blocks = rmdtools::find.rmd.nested(txt) %>%
@@ -149,10 +150,13 @@ parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtub
   ph.inds = which(ph$type=="quiz")
   quiz.li = lapply(ph.inds, function(ph.ind) {
     info = ph$info[[ph.ind]]
-    id = rmdtools::parse.block.args(info$header,allow.unquoted.title = TRUE)$name
-    if (is.null(id))
-      stop("All your quizzes must have names!")
-    quiz = shinyQuiz(id=id, yaml=info$inner.txt,add.handler = FALSE, lang=lang)
+    arg.str = trimws(str.right.of(info$header,"quiz"))
+    id = rmdtools::parse.block.args(arg.str=arg.str,allow.unquoted.title = TRUE)$name
+    if (is.true(nchar(id)==0) | is.na(id)) {
+
+      stop(paste0("You forgot to add a name for your quiz:\n\n", ph$txt[[ph.ind]],"\n\nStart the block like\n\n #< quiz \"myquiz\""))
+    }
+    quiz = shinyQuiz(id=id, yaml=info$inner.txt,add.handler = FALSE, lang=lang, allow.zero.correct=allow.zero.correct)
   })
   ph$value[ph.inds] = lapply(quiz.li, function(quiz) quiz$ui)
   names(ph$value) = ph$id

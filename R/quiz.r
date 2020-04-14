@@ -61,7 +61,7 @@ quizDefaults = function(lang="en") {
 # @param quiz.handler a function that will be called if the quiz is checked.
 #        The boolean argument solved is TRUE if the quiz was solved
 #        and otherwise FALSE
-shinyQuiz = function(id=paste0("quiz_",sample.int(10e10,1)),qu=NULL, yaml,  quiz.handler=NULL, add.handler=FALSE, single.check.btn=TRUE, defaults=quizDefaults(lang=lang), lang="en") {
+shinyQuiz = function(id=paste0("quiz_",sample.int(10e10,1)),qu=NULL, yaml,  quiz.handler=NULL, add.handler=FALSE, single.check.btn=TRUE, defaults=quizDefaults(lang=lang), lang="en", allow.zero.correct=FALSE) {
   restore.point("shinyQuiz")
 
   if (is.null(qu)) {
@@ -86,7 +86,7 @@ shinyQuiz = function(id=paste0("quiz_",sample.int(10e10,1)),qu=NULL, yaml,  quiz
      qu$checkBtnId = paste0(qu$id,"__checkBtn")
   }
 
-  qu$parts = lapply(seq_along(qu$parts), function(ind) init.quiz.part(qu$parts[[ind]],ind,qu, defaults=defaults))
+  qu$parts = lapply(seq_along(qu$parts), function(ind) init.quiz.part(qu$parts[[ind]],ind,qu, defaults=defaults, allow.zero.correct=allow.zero.correct))
   np = length(qu$parts)
 
   qu$max.points = sum(sapply(qu$parts, function(part) part[["points"]]))
@@ -100,7 +100,7 @@ shinyQuiz = function(id=paste0("quiz_",sample.int(10e10,1)),qu=NULL, yaml,  quiz
   qu
 }
 
-init.quiz.part = function(part=qu$parts[[part.ind]], part.ind=1, qu, has.check.btn=!qu$single.check.btn, defaults=quizDefaults()) {
+init.quiz.part = function(part=qu$parts[[part.ind]], part.ind=1, qu, has.check.btn=!qu$single.check.btn, defaults=quizDefaults(), allow.zero.correct=FALSE) {
   restore.point("init.quiz.part")
 
   part = copy.into.missing.fields(dest=part, source=defaults)
@@ -118,6 +118,10 @@ init.quiz.part = function(part=qu$parts[[part.ind]], part.ind=1, qu, has.check.b
 
   if (!is.null(part$choices)) {
     correct.choices = which(str.ends.with(part$choices,"*"))
+    if (length(correct.choices)==0 & part$multiple==FALSE & !allow.zero.correct) {
+      stop(paste0("You have not specified a correct answer for your quiz with question:\n\n", part$question,"\nJust put a * at the end of the correct answer. If you want to allow quizzes without correct answer set the argument allow.zero.correct=TRUE in your call to parse_mooc_rmd."))
+    }
+
     if (is.null(part$multiple)) {
       part$multiple = length(correct.choices) != 1
     }
@@ -203,8 +207,9 @@ quiz.ui = function(qu, solution=FALSE) {
 }
 
 quiz.part.ui = function(part, solution=FALSE, add.button=!is.null(part$checkBtnId)) {
+  question = rmdtools::md2html(part$question)
   head = list(
-    HTML(paste0("<p>",part$question,"</p>"))
+    HTML(paste0("<p>",question,"</p>"))
   )
   if (solution) {
     if (part$type=="numeric") {
@@ -317,11 +322,11 @@ click.check.quiz = function(app=getApp(), part.ind, qu, quiz.handler=NULL, ...) 
   if (correct) {
     cat("Correct!")
     setUI(part$resultId,HTML(part$success))
-    dsetUI(part$resultId,HTML(part$success))
+    dsetUI(part$resultId,withMathJax(HTML(part$success)))
   } else {
     cat("Wrong")
     setUI(part$resultId,HTML(part$failure))
-    dsetUI(part$resultId,HTML(part$failure))
+    dsetUI(part$resultId,withMathJax(HTML(part$failure)))
   }
   qu$state$part.solved[part.ind] = correct
   qu$state$solved = all(qu$state$part.solved)
