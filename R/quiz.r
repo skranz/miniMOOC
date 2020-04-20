@@ -321,11 +321,11 @@ click.check.quiz = function(app=getApp(), part.ind, qu, quiz.handler=NULL, ...) 
   }
   if (correct) {
     cat("Correct!")
-    setUI(part$resultId,HTML(part$success))
+    setUI(part$resultId,withMathJax(HTML(part$success)))
     dsetUI(part$resultId,withMathJax(HTML(part$success)))
   } else {
     cat("Wrong")
-    setUI(part$resultId,HTML(part$failure))
+    setUI(part$resultId,withMathJax(HTML(part$failure)))
     dsetUI(part$resultId,withMathJax(HTML(part$failure)))
   }
   qu$state$part.solved[part.ind] = correct
