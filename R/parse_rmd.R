@@ -129,6 +129,7 @@ parse_mooc_rmd = function(file,chunks=c("knit","render","ignore")[1], youtube.wi
 }
 
 parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtube.width = 560, youtube.height=round((315/560)*youtube.width), lang="en", allow.zero.correct=FALSE) {
+
   restore.point("parse_mooc_section")
 
   blocks = rmdtools::find.rmd.nested(txt) %>%
@@ -139,6 +140,14 @@ parse_mooc_section = function(txt, chunks=c("knit","render","ignore")[2], youtub
   if (length(lines)>0) {
     txt[lines] = unlist(lapply(txt[lines], youtube.hashdot.to.iframe,width=youtube.width, height=youtube.height))
   }
+
+  # Replace img blocks
+  lines = blocks$start[blocks$type=="img"]
+  if (length(lines)>0) {
+    txt[lines] = unlist(lapply(txt[lines], parse.img))
+  }
+
+
   txt = remove.ignore.blocks.from.txt(txt, blocks)
 
   cr = rmdtools::compile.rmd(text=txt, blocks="ph",chunks = chunks)
@@ -182,6 +191,30 @@ remove.ignore.blocks.from.txt = function(txt, blocks) {
   txt
 }
 
+
+parse.img = function(txt, base64=TRUE) {
+  restore.point("armd.parse.img")
+  arg.str = str.right.of(txt, "#. img ")
+  args = parse.block.args(arg.str = arg.str, allow.unquoted.title=FALSE)
+  file = args$file
+  base64 = TRUE
+  file.type = tools::file_ext(file)
+  img.args = args[setdiff(names(args),c("file","base64"))]
+  if (!base64) {
+    stop("Can currently only implement img blocks in base64 encoding. Try image or figure instead.")
+  }
+
+  uri = knitr::image_uri(file)
+  if (length(img.args)>0) {
+    html.opts = paste0(names(img.args),'="',img.args,'"', collapse=", ")
+  } else {
+    html.opts = ""
+  }
+  html = paste0('<img src="',uri,'" ', html.opts,">")
+  html
+}
+
+
 #' Converts the short tag for a youtube video
 #'
 #' #. youtube id = "youtubeid"
@@ -196,7 +229,7 @@ youtube.hashdot.to.iframe = function(str, width=560, height=round(width*0.5625))
   if (is.null(id)) {
     stop("No youtube video id provided!")
   }
-  html = paste0('<iframe width="', width,'" height="',height,'" src="https://www.youtube.com/embed/', id,'" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+  html = paste0('<iframe width="', width,'" height="',height,'" src="https://www.youtube.com/embed/', id,'?rel=0" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 ')
   html
 }
